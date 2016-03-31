@@ -92,7 +92,7 @@ do
 
     # Get all image ID
     ALL_LAYER_NUM=$(docker images -a | tail -n +2 | wc -l)
-    docker images -q --no-trunc | sort -o ImageIdList
+    docker images -q --no-trunc | sort -u -o ImageIdList
     CONTAINER_ID_LIST=$(docker ps -aq --no-trunc)
     # Get Image ID that is used by a containter
     rm -f ContainerImageIdList
@@ -170,7 +170,14 @@ do
     # Remove Images
     if [ -s ToBeCleaned ]; then
         echo "=> Start to clean $(cat ToBeCleaned | wc -l) images"
-        docker rmi $(cat ToBeCleaned) 2>/dev/null
+
+        # A Docker limitation prevents docker rmi from removing images
+        # that are tagged several times, so remove the tags instead of
+        # removing the IDs.
+        docker images --no-trunc --format '{{.ID}} {{.Repository}}:{{.Tag}}' \
+            | sort | join ToBeCleaned - | awk '{print $2}' \
+            | xargs -r docker rmi
+
         (( DIFF_LAYER=${ALL_LAYER_NUM}- $(docker images -a | tail -n +2 | wc -l) ))
         (( DIFF_IMG=$(cat ImageIdList | wc -l) - $(docker images | tail -n +2 | wc -l) ))
         if [ ! ${DIFF_LAYER} -gt 0 ]; then

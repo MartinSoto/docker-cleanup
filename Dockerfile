@@ -1,6 +1,6 @@
 FROM alpine:latest
 
-ENTRYPOINT ["/run.sh"]
+CMD ["/run.sh"]
 
 ENV CLEAN_PERIOD=**None** \
     DELAY_TIME=**None** \
@@ -10,7 +10,11 @@ ENV CLEAN_PERIOD=**None** \
     DEBUG=0
 
 # run.sh script uses some bash specific syntax
-RUN apk add --update bash docker grep
+RUN apk update \
+    && apk add bash coreutils grep \
+    && echo 'http://dl-cdn.alpinelinux.org/alpine/edge/community' >> /etc/apk/repositories \
+    && apk update \
+    && apk add 'docker>=1.10.0'
 
 # Install cleanup script
 ADD docker-cleanup-volumes.sh /docker-cleanup-volumes.sh
